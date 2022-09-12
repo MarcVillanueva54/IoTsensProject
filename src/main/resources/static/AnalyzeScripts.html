@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="scriptTable.css">
+</head>
+<body onload="getScriptNames()">
+<p><a href="index.html">Return to script and variable definition</a></p>
+<table id="scriptTables">
+    <tr>
+        <th>Script Name</th>
+        <th>Result</th>
+    </tr>
+</table> <br><br>
+<input type="button" id="evaluateButton" value="Evaluate all">
+
+<script>
+    var table = document.getElementById("scriptTables");    //get table
+
+    //ajax petition
+    function getScriptNames(){
+        $.ajax({                                            //ajax start
+            url: '/',
+            method: 'get',
+            success: function (data){
+                addScriptsToTable(data);
+            }
+        });
+    }
+    function addScriptsToTable(data){
+        var x = JSON.stringify(data).replace(/["}{\[\]]/g, '').split(/[,:]/);
+        console.log(x);
+        console.log(x.length);
+        for (let i = 0; i < x.length-1; i += 4) {
+            var newTr = document.createElement("tr");       //create tr
+            var firstTd = document.createElement("td");     //create first td
+            var secondTd = document.createElement("td");    //create second td
+            var firstText = document.createTextNode(x[i+1]);//create first text
+            var secondText = (x[i+3] === "") ?              //check if script has been evaluated
+                document.createTextNode("Not evaluated") : document.createTextNode(x[i+3]);
+            firstTd.appendChild(firstText);                 //append first text to first td
+            secondTd.appendChild(secondText);               //append second text to second td
+            newTr.appendChild(firstTd);                     //append first td to tr
+            newTr.appendChild(secondTd);                    //append second td to tr
+            table.appendChild(newTr);                       //append tr to talbe
+        }
+    }
+</script>
+
+</body>
+</html>
