@@ -1,17 +1,18 @@
 package com.example.demo;
 
+import com.example.demo.ServicesDefinition.AuditService;
+import com.example.demo.DocumentDefinition.Audit;
 import com.example.demo.DocumentDefinition.Script;
-import com.google.gson.Gson;
+import com.example.demo.ScriptFunction.ScriptExecution;
+import com.example.demo.ServicesDefinition.ScriptService;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
@@ -22,18 +23,29 @@ import java.util.*;
 @WebServlet("/DemoServlet")
 public class DemoServlet extends HttpServlet {
     private final ScriptService scriptService;
+    private final AuditService auditService;
 
-    @GetMapping
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException{
+    @GetMapping()
+    protected void doGet(HttpServletRequest request, HttpServletResponse response){
         List<Script> listScripts = scriptService.getAllScriptsName();
-        String json = new Gson().toJson(listScripts);
-        response.setContentType("application/json");
-        response.getWriter().write(json);
+
+        StringBuilder stringBuilder = new StringBuilder();
+
+        for (Script script : listScripts) {
+            stringBuilder.append(script.getScriptName()).append(";").append(script.getResult()).append(";");
+        }
+
+        try {
+            response.setContentType("text/plain");
+            response.getWriter().write(stringBuilder.toString());
+        }catch (IOException e){
+            registerAudit("Found IOException when showing scripts");
+        }
 
     }
 
     @PostMapping
-    protected void doPost(HttpServletRequest request, HttpServletRequest response) throws ServletException, IOException {
+    protected void doPost(HttpServletRequest request, HttpServletRequest response) {
 
         String scriptName = "Script" + (scriptService.getAllScriptsNum() + 1);
 
@@ -43,12 +55,9 @@ public class DemoServlet extends HttpServlet {
                 .replace("\r", "")
                 .replace("\n", " ");
 
-        String sRootPath = new File(scriptName).getAbsolutePath();
-        System.out.println("Path: " + sRootPath);
+        createWriteScriptDocument(scriptName, scriptBody); //creamos documento de script
 
-        createWriteScriptDocument(scriptName, scriptBody);
-
-
+        //=======Add variables defined in script to lists of keys and values=======//
         String[] splitScriptBody = scriptBody.split("[ ;]");
         for (int i = 0; i< splitScriptBody.length; i++ ){
             if (splitScriptBody[i].equals("var") || splitScriptBody[i].equals("let")){
@@ -57,37 +66,64 @@ public class DemoServlet extends HttpServlet {
             }
         }
 
+        //=======Build map for variable document inside script document======//
         Map<String, String> mapa = new HashMap<String, String>();
         for(int i = 0; i < keys.size(); i++){
             mapa.put(keys.get(i), values.get(i));
         }
 
-        Script script = new Script(
+        //=======Insert script in database IoTsensDB collection Script=======//
+        scriptService.insertScript(new Script(
                 scriptName,
-                sRootPath,
+                new File(scriptName).getAbsolutePath(), //cambiar por scriptBody para guardar input usuario
                 mapa,
-                ""
-        );
+                "Not Evaluated"
+        ));
 
-        scriptService.insertScript(script);
+        registerAudit("Registered new script: " + scriptName);
     }
 
-    public void createWriteScriptDocument(String scriptName, String scriptBody) throws IOException {
-        File myObj = new File(scriptName + ".txt");
-        if (myObj.createNewFile()){
-            System.out.println("File created with name " + myObj.getName());
-        }else{
-            System.out.println("Error al crear el fichero. Ya existe o no va.");
-        }
+    @PostMapping("executeScripts")
+    public void executeScripts() {
 
         try {
-            FileWriter myWriter = new FileWriter(myObj.getName());
-            myWriter.write(scriptBody);
-            myWriter.close();
-            System.out.println("Escrito bien");
-        }catch (IOException e) {
-            System.out.println("Escrito mal");
-            e.printStackTrace();
+
+            List<Script> scriptList = scriptService.getAllScriptPaths();
+
+            List<Object> executedScripts = ScriptExecution.executeScript(scriptList, auditService);
+
+            for (int i = 0; i < scriptList.size(); i++) {
+                scriptList.get(i).setResult(executedScripts.get(i) != null ? executedScripts.get(i).toString() : "");
+                //scriptList.get(i).setResult("Evaluated");  //uncomment this for test evaluation
+            }
+            updateScriptsResults(scriptList);
+
+        }catch (IndexOutOfBoundsException e){
+            registerAudit("Found IndexOutOfBoundsException when executing scripts");
+        }
+    }
+
+    //===========================Aux Functions=========================//
+    public void registerAudit(String action){   //registrar audit en bd
+        auditService.insertAudit(new Audit(action));
+    }
+
+    public void updateScriptsResults(List<Script> scriptList){  //update all scripts when evaluated
+        scriptService.updateScriptsResults(scriptList);
+    }
+
+    public void createWriteScriptDocument(String scriptName, String scriptBody) {   //crear y escribir doc. script
+        File myObj = new File(scriptName + ".txt");
+        try {
+            if (myObj.createNewFile()) {
+                FileWriter myWriter = new FileWriter(myObj.getName());
+                myWriter.write(scriptBody);
+                myWriter.close();
+            }
+        } catch (IOException e) {
+            registerAudit("Found IOException when storing " + myObj.getName());
+        } catch (SecurityException e) {
+            registerAudit("Found SecurityException when storing " + myObj.getName());
         }
     }
 }

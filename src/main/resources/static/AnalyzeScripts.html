@@ -14,7 +14,7 @@
         <th>Result</th>
     </tr>
 </table> <br><br>
-<input type="button" id="evaluateButton" value="Evaluate all">
+<button onclick="executeScripts()" id="evaluateButton" value="Evaluate all">Evaluate all</button>
 
 <script>
     var table = document.getElementById("scriptTables");    //get table
@@ -29,23 +29,34 @@
             }
         });
     }
-    function addScriptsToTable(data){
-        var x = JSON.stringify(data).replace(/["}{\[\]]/g, '').split(/[,:]/);
-        console.log(x);
-        console.log(x.length);
-        for (let i = 0; i < x.length-1; i += 4) {
+
+    function addScriptsToTable(data){   //montamos tabla
+        var x = data.split(";");        //JSON.stringify(data).replace(/["}{\[\]]/g, '').split(";");
+
+        for (let i = 0; i < x.length-1; i +=2) {
             var newTr = document.createElement("tr");       //create tr
             var firstTd = document.createElement("td");     //create first td
             var secondTd = document.createElement("td");    //create second td
-            var firstText = document.createTextNode(x[i+1]);//create first text
-            var secondText = (x[i+3] === "") ?              //check if script has been evaluated
-                document.createTextNode("Not evaluated") : document.createTextNode(x[i+3]);
+            var firstText = document.createTextNode(x[i]);//create first text
+            var secondText = document.createTextNode(x[i+1])             //check if script has been evaluated
+
             firstTd.appendChild(firstText);                 //append first text to first td
             secondTd.appendChild(secondText);               //append second text to second td
             newTr.appendChild(firstTd);                     //append first td to tr
             newTr.appendChild(secondTd);                    //append second td to tr
             table.appendChild(newTr);                       //append tr to talbe
         }
+    }
+
+    function executeScripts(){
+        $.ajax({                                            //ajax start
+            url: '/executeScripts',
+            method: 'post',
+            success: function (){
+                window.location.reload();   //reload page for table refresh
+                window.alert("Evaluation not implemented");
+            }
+        });
     }
 </script>
 

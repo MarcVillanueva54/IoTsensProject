@@ -4,7 +4,6 @@
     <title>IoTsens Project</title>
 </head>
 <body>
-<p><a href="/scriptVariables"> Ves</a></p>
 
 <p><a href="AnalyzeScripts.html">Go to script evaluation</a></p>
 <h2>Variable & Script Definition</h2>
@@ -35,8 +34,6 @@
         });
     });
 
-    //const data = Object.fromEntries(data.entries());
-
     //ajax petition
     $("#submitForm").submit(function (e){
         e.preventDefault();
@@ -45,7 +42,6 @@
             method: 'post',
             data: $(this).serialize(),
             success: function (response){
-                console.log(response);
             }
         });
     });

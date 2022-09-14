@@ -1,9 +1,11 @@
-package com.example.demo;
+package com.example.demo.ServicesDefinition;
 
 import com.example.demo.DocumentDefinition.Script;
+import com.example.demo.RepositoryInterfaces.ScriptRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @AllArgsConstructor
@@ -20,8 +22,15 @@ public class ScriptService {
         return scriptRepository.getTableScript();
     }
 
-    public String insertScript(Script script){
+    //public List<Script> getAllScriptPaths(){ return scriptRepository.getAllScriptsPath();}
+
+    public List<Script> getAllScriptPaths(){ return scriptRepository.findAll();}
+
+    public void insertScript(Script script){
         scriptRepository.insert(script);
-        return "Script introducido con éxito";
     }
+
+    public void updateScriptsResults(List<Script> scriptList){
+        scriptRepository.saveAll(scriptList);
+    };
 }

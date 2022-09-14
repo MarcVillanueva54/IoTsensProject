@@ -1,14 +1,16 @@
 package com.example.demo.DocumentDefinition;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Map;
 
+
 @Data
-@Document
-public class Script {
+@Document("Script")
+public class Script{
     @Id
     private String id;
     private String ScriptName;
